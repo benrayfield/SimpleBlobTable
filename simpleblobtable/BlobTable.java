@@ -11,7 +11,6 @@ import simpleblobtable.util.Binary;
 import simpleblobtable.util.Files;
 import simpleblobtable.util.Text;
 
-//sample code copied from http://www.lucenetutorial.com/lucene-in-5-minutes.html modified by benrayfield
 public class BlobTable{
 	
 	public BlobTable(File dir){
