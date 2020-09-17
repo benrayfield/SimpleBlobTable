@@ -17,7 +17,7 @@ byte[] otherKey = bt.put(otherVal);
 
 bt.delete(key);
 
-Also has InputStream for blobs too big to fit in byte[]
+Also has InputStream (get) and File (put) for blobs too big to fit in byte[]
 
 //Close the program. Run again. Its still there except those deleted.
 
