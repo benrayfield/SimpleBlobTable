@@ -1,14 +1,15 @@
-/** Ben F Rayfield offers this SimpleBlobTable software opensource MIT license */
+/** Ben F Rayfield offers this simpleblobtable software opensource MIT license */
 package simpleblobtable;
-
+import simpleblobtable.util.*;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.lang.ref.SoftReference;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Delayed;
-
-import simpleblobtable.util.Files;
-import simpleblobtable.util.Text;
 
 /** a byte array that may be stored on harddrive and gets cached into memory as needed.
 Dont modify the byte arrays.
@@ -25,6 +26,8 @@ public class Blob{
 	
 	/** may exist or not. its where it would be stored */
 	public final File file;
+	
+	private final int hash;
 
 	public Blob(BlobTable bt, byte[] key, byte[] val){
 		this(bt, key);
@@ -38,6 +41,7 @@ public class Blob{
 	public Blob(BlobTable bt, byte[] key){
 		this.key = key;
 		this.keyHex = Text.bytesToHex(key);
+		this.hash = this.keyHex.hashCode();
 		this.file = bt.file(this);
 	}
 	
@@ -51,6 +55,18 @@ public class Blob{
 			return val;
 		}
 		throw new Error("Couldnt find val (in memory or file) of "+this);
+	}
+	
+	public InputStream inStream(){
+		byte[] valFromCache = null;
+		if(valCache != null && (valFromCache=valCache.get()) != null){
+			//FIXME if its big then let them stream from file, so it can get uncached before they finish downloading or they might choose to download slow or pause the download, and could run out of memory
+			if(valFromCache != null) return new ByteArrayInputStream(valFromCache);
+		}
+		try{
+			//Dont load into memory (could be that 70gB wikipedia file, 20gB compressed) all at once
+			return new FileInputStream(file);
+		}catch (FileNotFoundException e){ throw new Error(e); }
 	}
 	
 	/** size in bits */
@@ -71,6 +87,16 @@ public class Blob{
 	
 	public String toString(){
 		return keyHex;
+	}
+	
+	public int hashCode(){
+		return hash;
+	}
+	
+	public boolean equals(Object o){
+		if(hashCode() != o.hashCode()) return false;
+		if(!(o instanceof Blob)) return false;
+		return keyHex.equals(((Blob)o).keyHex); //TODO faster if compare byte[]
 	}
 
 }

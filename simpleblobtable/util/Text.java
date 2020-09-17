@@ -1,4 +1,4 @@
-/** Ben F Rayfield offers this SimpleBlobTable software opensource MIT license */
+/** Ben F Rayfield offers this simpleblobtable software opensource MIT license */
 package simpleblobtable.util;
 import java.io.UnsupportedEncodingException;
 

@@ -1,4 +1,4 @@
-/** Ben F Rayfield offers this SimpleBlobTable software opensource MIT license */
+/** Ben F Rayfield offers this simpleblobtable software opensource MIT license */
 package simpleblobtable.util;
 
 import java.io.File;
@@ -52,6 +52,31 @@ public class Files{
 			throw new Error("Unknown kind of File object: "+f);
 		}
 		if(f.exists()) throw new Error("Failed delete "+f);
+	}
+	
+	public static void copy(File from, File to){
+		System.out.println("Copy file, "+from.length()+" bytes, from="+from+" to="+to);
+		if(to.exists()) to.delete();
+		to.getParentFile().mkdirs();
+		InputStream in = null;
+		OutputStream out = null;
+		try{
+			in = new FileInputStream(from);
+			out = new FileOutputStream(to);
+			/*int nextByte;
+			long bytesRead = 0;
+			while((nextByte=in.read()) != -1){
+				if(bytesRead%1000000000L==0) System.out.println("Files.copy bytesRead="+bytesRead+" from="+from+" to="+to); //TODO optimize by not using %
+				bytesRead++;
+				out.write(nextByte);
+			}*/
+			in.transferTo(out);
+		}catch(IOException e){
+			throw new Error(e);
+		}finally{
+			Stream.closeQuiet(in);
+			Stream.closeQuiet(out);
+		}
 	}
 
 }

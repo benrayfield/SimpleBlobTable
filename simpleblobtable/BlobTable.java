@@ -1,15 +1,14 @@
-/** Ben F Rayfield offers this SimpleBlobTable software opensource MIT license */
+/** Ben F Rayfield offers this simpleblobtable software opensource MIT license */
 package simpleblobtable;
-
+import simpleblobtable.util.*;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-
-import simpleblobtable.util.Binary;
-import simpleblobtable.util.Files;
-import simpleblobtable.util.Text;
 
 public class BlobTable{
 	
@@ -32,13 +31,31 @@ public class BlobTable{
 		return getBlobByKeyAndVal(key, val);
 	}
 	
+	/** byte[blobs.size()][40] in any order. Dont modify the byte[40]s cuz they're backing arrays. */
+	public byte[][] allIds(){
+		Collection<Blob> v = blobs.values();
+		byte[][] ids = new byte[v.size()][];
+		int count = 0;
+		for(Blob b : v){
+			ids[count++] = b.key;
+		}
+		return ids;
+	}
+	
 	/** file may exist or not. Its the file it would go in. */
 	public File file(Blob b){
 		return new File(new File(dir,b.keyHex.substring(0,3)),b.keyHex+fileNameSuffix);
 	}
 	
-	protected Blob getBlobByKey(byte[] key){
-		String keyHex = Text.bytesToHex(key); //a substring of Blob.keyAsString
+	public Blob getBlobByKeyHex(String keyHex){
+		return getBlobByKeyAndKeyhex(Text.hexToBytes(keyHex), keyHex);
+	}
+	
+	public Blob getBlobByKey(byte[] key){
+		return getBlobByKeyAndKeyhex(key, Text.bytesToHex(key));
+	}
+	
+	private Blob getBlobByKeyAndKeyhex(byte[] key, String keyHex){
 		Blob b;
 		synchronized(blobs){
 			b = blobs.get(keyHex);
@@ -78,6 +95,14 @@ public class BlobTable{
 		return get(key);
 	}
 	
+	public InputStream inStream(byte[] key){
+		return getBlobByKey(key).inStream();
+	}
+	
+	public InputStream inStream(String keyHex){
+		return inStream(Text.hexToBytes(keyHex));
+	}
+	
 	/** retuSAERFasfferns hex of key */
 	public String put(String valAsString){
 		byte[] val = Text.strToBytes(valAsString);
@@ -93,6 +118,25 @@ public class BlobTable{
 	public byte[] put(byte[] val){
 		byte[] key = keyOf(val);
 		put(key, val);
+		return key;
+	}
+	
+	/** returns key. Copies file into blobtable. File can be bigger than fits in memory. */
+	public byte[] put(File f){
+		if(!f.isFile()) throw new Error("Tried to put nonexistant file: "+f);
+		byte[] key = keyOf(f);
+		Blob blob = getBlobByKey(key);
+		if(blob.file.exists() && blob.file.length() == f.length()){
+			System.out.println("Blob already exists. keyHex="+Text.bytesToHex(key)+" noNeedToPut="+f+" alreadyExists="+blob.file);
+			return key; //appears to already exist
+		}
+		Files.copy(f, blob.file);
+		byte[] verifyKey = keyOf(blob.file); //in case file was modified during copy or didnt copy right
+		if(!Binary.byteArraysEqual(key, verifyKey)){
+			delete(key);
+			throw new Error("Error copying "+f+" to "+blob.file+" so deleted it");
+		}
+		System.out.println("Done put file "+f+" to "+blob.file);
 		return key;
 	}
 	
@@ -112,6 +156,50 @@ public class BlobTable{
 			Binary.copyLongIntoByteArray(key, hash.length, bitLen);
 			return key;
 		}catch (NoSuchAlgorithmException e){ throw new Error(e); }
+	}
+	
+	public static byte[] sha3_256(InputStream in){
+		try{
+			MessageDigest md = MessageDigest.getInstance("SHA3-256");
+			long bytesRead = 0;
+			/*int byteRead;
+			while((byteRead=in.read()) != -1){
+				if(bytesRead%1000000L==0) System.out.println("sha3_256 bytesRead="+bytesRead); //TODO optimize by not using %
+				bytesRead++;
+				md.update((byte)byteRead);
+			}*/
+			byte[] block = new byte[1<<14];
+			long lastLogAtBytes = Long.MIN_VALUE/2;
+			long logIncrementInBytes = 1000000000;
+			while(true){
+				int readThisTime = in.read(block);
+				if(readThisTime == -1) break;
+				bytesRead += readThisTime;
+				md.update(block, 0, readThisTime);
+				long bytesReadSinceLastLog = bytesRead-lastLogAtBytes;
+				if(bytesReadSinceLastLog >= logIncrementInBytes){
+					lastLogAtBytes = bytesRead;
+					System.out.println("sha3_256 mB read="+(bytesRead*1e-6));
+				}
+			}
+			return md.digest();
+		}catch(Exception e){
+			throw new Error(e); 
+		}finally{
+			Stream.closeQuiet(in);
+		}
+	}
+	
+	public byte[] keyOf(File f){
+		try{
+			MessageDigest md = MessageDigest.getInstance("SHA3-256");
+			long bitLen = f.length()<<3;
+			byte[] hash = sha3_256(new FileInputStream(f));
+			byte[] key = new byte[hash.length+8];
+			System.arraycopy(hash, 0, key, 0, hash.length);
+			Binary.copyLongIntoByteArray(key, hash.length, bitLen);
+			return key;
+		}catch (Exception e){ throw new Error(e); }
 	}
 	
 	/** key's last 64 bits are bit len of content it points at */
@@ -174,7 +262,7 @@ public class BlobTable{
 		if(!aabbcc.equals("aabbcc")) throw new Error("test failed: aabbcc");
 		System.out.println("blobtable tests passed");
 		
-		bt.delete(bt.keyOf(Text.strToBytes("aabbcc")));
+		//bt.delete(bt.keyOf(Text.strToBytes("aabbcc")));
 	}
   
 }

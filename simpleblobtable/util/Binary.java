@@ -1,4 +1,4 @@
-/** Ben F Rayfield offers this SimpleBlobTable software opensource MIT license */
+/** Ben F Rayfield offers this simpleblobtable software opensource MIT license */
 package simpleblobtable.util;
 
 public class Binary{
@@ -16,6 +16,12 @@ public class Binary{
 			j = (j<<8)|(b[byteIndex+i]&0xff);
 		}
 		return  j;
+	}
+	
+	public static boolean byteArraysEqual(byte[] a, byte[] b){
+		if(a.length != b.length) return false;
+		for(int i=0; i<a.length; i++) if(a[i] != b[i]) return false;
+		return true;
 	}
 
 }
