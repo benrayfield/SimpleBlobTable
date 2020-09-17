@@ -17,6 +17,8 @@ byte[] otherKey = bt.put(otherVal);
 
 bt.delete(key);
 
+Also has InputStream for blobs too big to fit in byte[]
+
 //Close the program. Run again. Its still there except those deleted.
 
 (Ben Rayfield is planning to use this or a variant of it in occamsfuncer for blob storage using tree hashing of a hash function given as a param since occamsfuncer generates its own id functions as its very self-referencing, and variants of this have been useful in a few earlier but smaller projects)
